@@ -40,23 +40,25 @@ handle_call( {make_turn, PlayerName, X, Y}, _, State) ->
     {reply, Status, NewState};
 handle_call({join, Name}, _, State) ->
     {Status, NewState} = join_game(Name, State),
-    {reply, Status, NewState};
-handle_call({leave, Name}, _, State) ->
-    {Status, NewState} = leave_game(Name, State),
     {reply, Status, NewState}.
 
 handle_cast({reset}, _ ) -> {noreply, #game_state{}};
+handle_cast({leave, Name}, State) -> {noreply, leave_game(Name, State)};
 handle_cast(_Request, State) -> {noreply, State}.
 
 who_plays(State) ->
     Players = State#game_state.players,
-    Whose_turn = lists:nth(State#game_state.whose_turn, State#game_state.players),
+    Whose_turn =
+        case State#game_state.whose_turn == 0 of
+            true -> "";
+            false -> lists:nth(State#game_state.whose_turn, State#game_state.players)
+        end,
     {Players, Whose_turn}.
 
 who_won(State) ->
     case State#game_state.who_won == [] of
         true -> null;
-        false -> State#game_state.who_won
+        false -> lists:nth(State#game_state.who_won, State#game_state.players)
     end.
 
 get_cell(X, Y, State) ->
@@ -74,7 +76,7 @@ try_make_turn(X, Y, PlayerName, State) ->
         if
             ((State#game_state.who_won /= []) and (State#game_state.who_won == PlayerName)) -> game_over_you_win;
             ((State#game_state.who_won /= []) and (State#game_state.who_won /= PlayerName)) -> game_over;
-             Whose_turn /= PlayerName -> not_your_turn;
+            Whose_turn /= PlayerName -> not_your_turn;
             true -> ok
         end,
     NewState =
@@ -100,7 +102,7 @@ try_make_turn(X, Y, PlayerName, State) ->
                         false -> State#game_state.who_won
                     end,
                 State#game_state{field = New_field, whose_turn = New_whose_turn, who_won = New_who_won};
-            true ->
+            _ ->
                 State
         end,
     {Status, NewState}.
@@ -114,19 +116,27 @@ join_game(Name, State) ->
     NewState =
         case Status of
             player_exists -> State;
-            ok -> State#game_state{players = lists:append(State#game_state.players, [Name])}
+            ok -> New_whose_turn =
+                case State#game_state.whose_turn == 0 of
+                    true -> 1;
+                    false -> State#game_state.whose_turn
+                end,
+                State#game_state{players = lists:append(State#game_state.players, [Name]), whose_turn = New_whose_turn}
         end,
     {Status, NewState}.
 
 leave_game(Name, State) ->
     Length = length(State#game_state.players),
     Player_index = additional_functions:first_entry(Name, State#game_state.players),
-    New_whos_turn =
+    New_whose_turn =
         if
-            ((Player_index == State#game_state.whose_turn) and (Player_index == Length)) -> 1;
+            ((Player_index == State#game_state.whose_turn) and (Player_index == Length)) ->
+                case Player_index of
+                    1 -> 0;
+                    _ -> 1
+                end;
             Player_index < State#game_state.whose_turn -> State#game_state.whose_turn - 1;
             true -> State#game_state.whose_turn
         end,
     New_list = lists:delete(Name, State#game_state.players),
-    NewState = State#game_state{players = New_list, whose_turn = New_whos_turn},
-    {ok, NewState}.
+    State#game_state{players = New_list, whose_turn = New_whose_turn}.

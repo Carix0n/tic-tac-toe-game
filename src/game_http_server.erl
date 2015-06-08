@@ -11,9 +11,9 @@ ct_string(text) -> "Content-type: text/plain\r\n\r\n".
 who_plays(SessionId, _, _) ->
     {Players, Whose_turn} = gen_server:call(?LOGIC, {who_plays}),
     Player_list = lists:map(fun(Player) ->
-        io_lib:format("~s", [Player])
+        io_lib:format("\"~s\"", [Player])
     end, Players),
-    WhoPlaysJSON = "{\"players\": [" ++ string:join(Player_list, ", ") ++ io_lib:format("],~n\"whose_turn\": ~s", [Whose_turn]) ++ "}",
+    WhoPlaysJSON = "{\"players\": [" ++ string:join(Player_list, ", ") ++ io_lib:format("],~n\"whose_turn\": \"~s\"", [Whose_turn]) ++ "}",
     mod_esi:deliver(SessionId, ct_string(json) ++ WhoPlaysJSON).
 
 join(SessionId, _, In) ->
@@ -45,17 +45,22 @@ make_turn(SessionId, _, In) ->
             Cell_status = gen_server:call(?LOGIC, {get_cell, X, Y}),
             case Cell_status of
                 {is_not_free, _} -> mod_esi:deliver(SessionId, ct_string(text) ++ "not_empty_cell");
-                if_free ->
+                is_free ->
                     Status = gen_server:call(?LOGIC, {make_turn, Name, X, Y}),
                     mod_esi:deliver(SessionId, ct_string(text) ++ atom_to_list(Status))
             end;
         _ -> mod_esi:deliver(SessionId, ct_string(text) ++ "bad_request")
     end.
 
-reset(_SessionId, _, _) ->
-    gen_server:call(?LOGIC, {reset}).
-%%    mod_esi:deliver(SessionId, ct_string(text) ++ "ok"). %% Not sure whether deliver is needed or not
+reset(SessionId, _, _) ->
+    gen_server:cast(?LOGIC, {reset}),
+    mod_esi:deliver(SessionId, ct_string(text) ++ "ok").
 
 who_won(SessionId, _, _) ->
     Status = gen_server:call(?LOGIC, {who_won}),
-    mod_esi:deliver(SessionId, ct_string(json) ++ atom_to_list(Status)).
+    Msg =
+        case Status of
+            null -> io_lib:format("null", []);
+            _ -> io_lib:format("\"~s\"", Status)
+        end,
+    mod_esi:deliver(SessionId, ct_string(json) ++ Msg).
