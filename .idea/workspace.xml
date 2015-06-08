@@ -2,9 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="05e37297-4ab7-4fca-ab5b-f99e80645477" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/additional_functions.erl" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/game_http_server.erl" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/game_logic.erl" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/erl_crash.dump" afterPath="$PROJECT_DIR$/erl_crash.dump" />
     </list>
     <ignored path="tic-tac-toe-game.iws" />
     <ignored path=".idea/workspace.xml" />
